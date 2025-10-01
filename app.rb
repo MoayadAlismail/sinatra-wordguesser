@@ -9,7 +9,7 @@ class WordGuesserApp < Sinatra::Base
   set :host_authorization, { permitted_hosts: [] }  
 
   before do
-    @game = session[:game] || WordGuesserGame.new('')
+    @game = session[:game]
   end
 
   after do
@@ -40,7 +40,15 @@ class WordGuesserApp < Sinatra::Base
   # If a guess is invalid, set flash[:message] to "Invalid guess."
   post '/guess' do
     params[:guess].to_s[0]
-    ### YOUR CODE HERE ###
+    ch = params[:guess].to_s[0]  # take only the first character
+
+    begin
+      ok = @game.guess(ch)
+      flash[:message] = "You have already used that letter." if ok == false
+    rescue ArgumentError
+      flash[:message] = "Invalid guess."
+    end
+
     redirect '/show'
   end
 
@@ -50,17 +58,24 @@ class WordGuesserApp < Sinatra::Base
   # Notice that the show.erb template expects to use the instance variables
   # wrong_guesses and word_with_guesses from @game.
   get '/show' do
-    ### YOUR CODE HERE ###
-    erb :show # You may change/remove this line
+    state = @game.check_win_or_lose
+    return redirect '/win'  if state == :win
+    return redirect '/lose' if state == :lose
+
+    # expose for the template if it references these directly
+    @wrong_guesses     = @game.wrong_guesses
+    @word_with_guesses = @game.word_with_guesses
+
+    erb :show
   end
 
   get '/win' do
-    ### YOUR CODE HERE ###
-    erb :win # You may change/remove this line
+    return redirect '/show' unless @game.check_win_or_lose == :win
+    erb :win
   end
-
+  
   get '/lose' do
-    ### YOUR CODE HERE ###
-    erb :lose # You may change/remove this line
+    return redirect '/show' unless @game.check_win_or_lose == :lose
+    erb :lose
   end
 end
